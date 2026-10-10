@@ -1,0 +1,282 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>2048 — Neon Rush</title>
+<style>
+:root{--bg:#101126;--panel:#20213e;--accent:#a8ff60;--pink:#ff65c5;--text:#f8f8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center;overflow-x:hidden}
+button,input{font:inherit}
+button{border:0;cursor:pointer;touch-action:manipulation}
+.app{width:100%;max-width:480px;padding:20px;position:relative}
+.screen{display:none;animation:fade .35s ease}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.logo{text-align:center;font-size:clamp(42px,12vw,64px);font-weight:1000;letter-spacing:-4px;line-height:1.05;color:var(--accent);text-shadow:4px 4px 0 #5a3c91;margin:12px 0}
+.tag{text-align:center;color:#b7b9da;margin:12px 0 28px}
+.card{background:var(--panel);border:1px solid #34365a;border-radius:24px;padding:22px;box-shadow:0 14px 35px #0003}
+label{display:block;margin-bottom:8px;font-weight:700}
+input{width:100%;padding:15px;border-radius:12px;border:2px solid #45476a;background:#14152b;color:white;outline:none}
+input:focus{border-color:var(--accent)}
+.primary{width:100%;padding:17px;border-radius:14px;background:var(--accent);color:#16172a;font-size:19px;font-weight:900;box-shadow:0 5px 0 #6da535;transition:transform .12s}
+.primary:active{transform:translateY(3px);box-shadow:0 2px 0 #6da535}
+.hint{text-align:center;font-size:13px;color:#aaaed0;margin-top:22px;line-height:1.7}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0 18px}
+.mini-logo{font-size:29px;font-weight:1000;color:var(--accent);letter-spacing:-2px}
+.player{font-size:13px;color:#c8c9e4;text-align:right}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:var(--panel);padding:12px;border-radius:14px;text-align:center;border:1px solid #353756}
+.stat span{display:block;font-size:11px;color:#aeb0d0;text-transform:uppercase;letter-spacing:1.5px}
+.stat strong{display:block;font-size:25px;color:white;margin-top:2px}
+.board{width:100%;aspect-ratio:1;background:#272844;padding:9px;border-radius:17px;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:9px;touch-action:none;user-select:none}
+.cell{min-width:0;min-height:0;background:#383957;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:950;font-size:clamp(21px,7vw,35px);letter-spacing:-1px;animation:appear .16s ease-out;transition:background .12s}
+@keyframes appear{from{transform:scale(.88);opacity:.65}to{transform:scale(1);opacity:1}}
+.v2{background:#e8e9ff;color:#252545}
+.v4{background:#b9c7ff;color:#252545}
+.v8{background:#7cebd4;color:#152c3b}
+.v16{background:#65d7ff;color:#112c46}
+.v32{background:#6bafff;color:#fff}
+.v64{background:#a18aff;color:#fff}
+.v128{background:#d58aff;color:#271338;font-size:clamp(18px,5.5vw,29px)}
+.v256{background:#ff81cb;color:#401431;font-size:clamp(18px,5.5vw,29px)}
+.v512{background:#ff9d77;color:#401d20;font-size:clamp(18px,5.5vw,29px)}
+.v1024{background:#ffe16b;color:#352b08;font-size:clamp(15px,4.5vw,24px)}
+.v2048{background:var(--accent);color:#19230c;font-size:clamp(15px,4.5vw,24px);box-shadow:inset 0 0 14px #fff9}
+.vbig{background:#ff4f70;color:white;font-size:clamp(14px,4vw,22px)}
+.board-footer{display:flex;justify-content:space-between;align-items:center;color:#aeb0d0;font-size:12px;margin:14px 2px}
+.secondary{background:#303250;color:white;padding:10px 14px;border-radius:10px;font-weight:700}
+.overlay{position:absolute;inset:0;background:#101126eF;display:none;align-items:center;justify-content:center;padding:24px;border-radius:25px;z-index:5}
+.overlay.show{display:flex;animation:fade .25s}
+.overlay-card{text-align:center;width:100%;background:var(--panel);border:1px solid #45476a;border-radius:24px;padding:26px}
+.overlay-card h2{font-size:35px;margin:5px 0 10px;color:var(--accent)}
+.final-score{font-size:46px;font-weight:1000;margin:10px}
+.overlay-card p{color:#c0c2df;line-height:1.5}
+.overlay-card .primary{margin-top:12px}
+@media(min-height:800px){.app{padding-top:28px;padding-bottom:28px}}
+@media(max-height:700px){.app{padding:10px 18px}.logo{font-size:43px;margin:4px 0}.tag{margin:8px 0 15px}.card{padding:17px}.board{gap:6px;padding:7px}.cell{border-radius:7px}.topline{margin:2px 0 10px}.stats{margin-bottom:10px}.stat{padding:7px}.hint{margin-top:12px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <section id="titleScreen" class="screen active">
+    <div class="logo">2048<span style="color:var(--pink)">!</span></div>
+    <p class="tag">SLIDE. MERGE. CONQUER.</p>
+    <div class="card">
+      <label for="playerName">What's your name?</label>
+      <input id="playerName" maxlength="18" placeholder="Enter your first name" autocomplete="given-name">
+      <div style="height:20px"></div>
+      <button class="primary" id="playButton">LET'S PLAY ↗</button>
+    </div>
+    <p class="hint">✦ Match identical tiles to combine them<br>✦ Reach 2048 to become a legend<br>✦ Watch out — the challenge ramps up!</p>
+  </section>
+
+  <section id="gameScreen" class="screen">
+    <div class="topline">
+      <div class="mini-logo">2048<span style="color:var(--pink)">!</span></div>
+      <div class="player">PLAYING AS<br><strong id="playerDisplay">Player</strong></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+      <div class="stat"><span>Best</span><strong id="best">0</strong></div>
+    </div>
+    <div id="board" class="board" aria-label="2048 game board"></div>
+    <div class="board-footer">
+      <span>SWIPE OR USE ARROW KEYS</span>
+      <button class="secondary" id="restartButton">↻ Restart</button>
+    </div>
+    <div class="overlay" id="gameOver">
+      <div class="overlay-card">
+        <div style="font-size:45px">🌀</div>
+        <h2 id="overTitle">Game Over!</h2>
+        <p id="overText">No more moves available.</p>
+        <div class="final-score" id="finalScore">0</div>
+        <p>POINTS SCORED</p>
+        <button class="primary" id="againButton">PLAY AGAIN ↗</button>
+        <button class="secondary" id="homeButton" style="width:100%;margin-top:14px">Main menu</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const titleScreen = $("titleScreen"), gameScreen = $("gameScreen");
+  const boardEl = $("board"), scoreEl = $("score"), bestEl = $("best");
+  let grid, score = 0, best = 0, player = "Player";
+  let audio = null, started = false, touchStart = null;
+  let won = false, gameEnded = false;
+
+  try { best = Number(localStorage.getItem("neon2048-best")) || 0; } catch(e) {}
+  bestEl.textContent = best;
+  try { $("playerName").value = localStorage.getItem("neon2048-name") || ""; } catch(e) {}
+
+  function sound(freq = 440, duration = .08, type = "sine") {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+      const osc = audio.createOscillator(), gain = audio.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audio.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq * .7), audio.currentTime + duration);
+      gain.gain.setValueAtTime(.09, audio.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration);
+      osc.connect(gain); gain.connect(audio.destination);
+      osc.start(); osc.stop(audio.currentTime + duration);
+    } catch(e) {}
+  }
+
+  function showScreen(screen) {
+    titleScreen.classList.toggle("active", screen === titleScreen);
+    gameScreen.classList.toggle("active", screen === gameScreen);
+  }
+
+  function startGame() {
+    if (!started) { sound(520); started = true; }
+    player = $("playerName").value.trim().slice(0, 18) || "Player";
+    try { localStorage.setItem("neon2048-name", player); } catch(e) {}
+    $("playerDisplay").textContent = player;
+    $("gameOver").classList.remove("show");
+    score = 0; won = false; gameEnded = false;
+    grid = Array(16).fill(0);
+    spawn(); spawn();
+    updateScore(); render();
+    showScreen(gameScreen);
+    sound(600, .12);
+  }
+
+  function spawn() {
+    const empty = [];
+    grid.forEach((v, i) => { if (!v) empty.push(i); });
+    if (!empty.length) return;
+    const i = empty[Math.floor(Math.random() * empty.length)];
+    // Higher scores introduce stronger tiles, increasing the challenge.
+    const r = Math.random();
+    let value = 2;
+    if (score >= 1200 && r < .07) value = 8;
+    else if (score >= 500 && r < .12) value = 4;
+    else if (r < .1) value = 4;
+    grid[i] = value;
+  }
+
+  function updateScore() {
+    scoreEl.textContent = score.toLocaleString();
+    if (score > best) {
+      best = score;
+      bestEl.textContent = best.toLocaleString();
+      try { localStorage.setItem("neon2048-best", best); } catch(e) {}
+    }
+  }
+
+  function render() {
+    boardEl.innerHTML = "";
+    grid.forEach(value => {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      if (value) {
+        cell.textContent = value;
+        cell.classList.add(value <= 2048 ? "v" + value : "vbig");
+        cell.setAttribute("aria-label", value.toString());
+      }
+      boardEl.appendChild(cell);
+    });
+  }
+
+  function move(direction) {
+    if (gameEnded || !gameScreen.classList.contains("active")) return;
+    const old = grid.slice();
+    let gained = 0, merges = 0;
+    for (let line = 0; line < 4; line++) {
+      const indexes = [];
+      for (let pos = 0; pos < 4; pos++) {
+        const r = direction === "up" ? pos : direction === "down" ? 3-pos : line;
+        const c = direction === "left" ? pos : direction === "right" ? 3-pos : line;
+        indexes.push(r * 4 + c);
+      }
+      let values = indexes.map(i => grid[i]).filter(v => v);
+      const merged = [];
+      for (let i = 0; i < values.length; i++) {
+        if (values[i] === values[i+1]) {
+          const value = values[i] * 2;
+          merged.push(value);
+          gained += value; merges++;
+          i++;
+        } else merged.push(values[i]);
+      }
+      while (merged.length < 4) merged.push(0);
+      indexes.forEach((idx, i) => grid[idx] = merged[i]);
+    }
+    if (grid.every((v, i) => v === old[i])) return;
+    score += gained;
+    spawn();
+    updateScore();
+    render();
+    sound(merges ? 700 + Math.min(gained, 1200) / 3 : 300, .07, merges ? "triangle" : "sine");
+    if (!won && grid.includes(2048)) {
+      won = true;
+      $("overTitle").textContent = "YOU DID IT!";
+      $("overText").textContent = "Incredible, " + player + "! You reached 2048. Keep going if you dare.";
+      $("finalScore").textContent = score.toLocaleString();
+      sound(880, .3, "triangle");
+      $("gameOver").classList.add("show");
+      gameEnded = true;
+      return;
+    }
+    if (!canMove()) endGame();
+  }
+
+  function canMove() {
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      const i = r * 4 + c;
+      if (!grid[i]) return true;
+      if (c < 3 && grid[i] === grid[i+1]) return true;
+      if (r < 3 && grid[i] === grid[i+4]) return true;
+    }
+    return false;
+  }
+
+  function endGame() {
+    gameEnded = true;
+    $("overTitle").textContent = "GAME OVER!";
+    $("overText").textContent = "No moves left, " + player + ". Fancy another round?";
+    $("finalScore").textContent = score.toLocaleString();
+    $("gameOver").classList.add("show");
+    sound(180, .3, "sawtooth");
+  }
+
+  $("playButton").addEventListener("click", startGame);
+  $("againButton").addEventListener("click", startGame);
+  $("restartButton").addEventListener("click", startGame);
+  $("homeButton").addEventListener("click", () => {
+    $("gameOver").classList.remove("show");
+    showScreen(titleScreen);
+  });
+
+  document.addEventListener("keydown", e => {
+    const keys = {ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down"};
+    if (keys[e.key] && gameScreen.classList.contains("active")) {
+      e.preventDefault();
+      move(keys[e.key]);
+    }
+    if (e.key === "Enter" && titleScreen.classList.contains("active")) startGame();
+  });
+
+  boardEl.addEventListener("pointerdown", e => {
+    touchStart = {x:e.clientX, y:e.clientY};
+  });
+  boardEl.addEventListener("pointerup", e => {
+    if (!touchStart) return;
+    const dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
+    touchStart = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+    if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? "right" : "left");
+    else move(dy > 0 ? "down" : "up");
+  });
+  boardEl.addEventListener("pointercancel", () => touchStart = null);
+})();
+</script>
+</body>
+</html>
